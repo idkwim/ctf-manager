@@ -1,0 +1,143 @@
+{% extends "bootstrap/base.html" %}
+{% block title %}{% if event.name %}{{ event.name }}{% else %}-{% endif %}{% endblock %}
+
+{% block content %}
+{% if event %}
+  <div class="row">
+    <div class="col-md-1">&nbsp;</div>
+    <div class="col-md-10">
+      <table class="table">
+          <thead>
+              <tr>
+                  <td>Event</td>
+                  <td>Type</td>
+                  <td>Start Date</td>
+                  <td>End Date</td>
+                  <td>URL</td>
+                  <td>Login</td>
+                  <td>Password</td>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td>{{ event.name }}</td>
+                  <td>{{ event.type }}</td>
+                  <td>
+                    <span class="text-success"><strong>{{ event.local_start_date }}</strong></span><br />
+                    {{ event.start_date }} (GMT)
+                  </td>
+                  <td>
+                    <span class="text-success"><strong>{{ event.local_end_date }}</strong></span><br />
+                    {{ event.end_date }} (GMT)
+                  </td>
+                  <td><a href="{{ event.url }}" target="_blank">{{ event.url }}</a></td>
+                  <td>{{ event.login }}</td>
+                  <td>{{ event.password }}</td>
+              </tr>
+          </tbody>
+      </table>
+    </div>
+    <div class="col-md-1">&nbsp;</div>
+  </div>
+  <div class="row">
+    {% if event.type == 'Jeopardy' %}
+    <div class="col-md-1">&nbsp;</div>
+    <div class="col-md-10">
+      <div class="page-header">
+        <h3>Jeopardy Categories</h3>
+      </div>
+      {% for row in event.details %}
+      <div class="col-md-2">
+      <table class="table table-bordered table-condensed">
+        <thead>
+          <tr><td align="center"><strong>{{ row.category }}</strong></td></tr>
+        </thead>
+        <tbody>
+          {% for point in row.points %}
+          <tr><td align="center" class="category-item" data-category="{{ row.category }}" data-point-value="{{ point }}">{{ point }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="col-md-1">&nbsp;</div>
+    {% endif %}
+  </div>
+  <div name="item-status" class="row" style="display:none;">
+    <div class="col-md-1">&nbsp;</div>
+    <div class="col-md-10">
+      <div class="page-header">
+        <h4>Edit Category Item <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button></h4>
+      </div>
+      <form class="form-inline" role="form">
+        <input type="hidden" name="event" value="{{ short_code }}" />
+        <input type="hidden" name="category" value="" />
+        <input type="hidden" name="point_value" value="" />
+        <div class="form-group">
+          <label class="sr-only" for="assigned">Assigned members</label>
+          <input type="text" class="form-control" id="assigned" name="assigned" placeholder="Assigned members">
+        </div>
+        <button type="submit" name="update-record" class="btn btn-default">Update record</button>
+      </form>
+    </div>
+    <div class="col-md-1">&nbsp;</div>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script type="text/javascript">
+    $(document).ready(function() {
+      $('button.close').on('click', function() {
+        $('input[name="category"]').val('');
+        $('input[name="point_value"]').val('');
+        $('div[name="item-status"]').hide();
+
+        $('tr.info').removeClass('info');
+      });
+
+      $('td.category-item').on('click',function() {
+        var category = $(this).data('category');
+        var point_value = $(this).data('point-value');
+
+        $(this).parent().addClass('info');
+
+        $('input[name="category"]').val(category);
+        $('input[name="point_value"]').val(point_value);
+        $('div[name="item-status"]').show();
+      });
+
+      $('button[name="update-record"]').on('click', function(e) {
+        e.preventDefault();
+        var event_code = $('input[name="event"]').val();
+        var category = $('input[name="category"]').val();
+        var point_value = $('input[name="point_value"]').val();
+        var assigned = $('input[name="assigned"]').val();
+       
+        $.ajax({
+          url: '/update-item-status',
+          type: 'POST',
+          data: {
+            event_code: event_code,
+            category: category,
+            point_value: point_value,
+            assigned: assigned
+          }
+        }).done(function(data) {
+          if(data.status == 'success') {
+            var category = $('input[name="category"]').val();
+            var point_value = $('input[name="point_value"]').val();
+            $('td.category-item[data-category="' + category + '"][data-point-value="' + point_value + '"]').parent().removeClass('info').addClass('success');
+
+            $('input[name="category"]').val('');
+            $('input[name="point_value"]').val('');
+            $('input[name="assigned"]').val('');
+            $('div[name="item-status"]').hide();
+          }
+        });
+      })
+    });
+  </script>
+{% endblock %}
